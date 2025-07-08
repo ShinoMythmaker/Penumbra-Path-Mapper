@@ -11,6 +11,19 @@ def generate_penumbra_json(patterns, variant, group_name, source_races, target_r
         return path.replace("{variant}", variant)
 
     options = []
+    
+    # Add default "No Changes" option first
+    default_option = {
+        "Name": "Off",
+        "Description": "Keep original game files unchanged",
+        "Priority": 0,
+        "Files": {},
+        "FileSwaps": {},
+        "Manipulations": []
+    }
+    options.append(default_option)
+    
+    # Add race-specific options
     for target_race, target_id in target_races.items():
         file_swaps = {}
         for pattern in patterns:
@@ -29,6 +42,66 @@ def generate_penumbra_json(patterns, variant, group_name, source_races, target_r
         options.append(option)
 
     json_name = f"{group_name}{variant}"
+    return ({
+        "Version": 0,
+        "Name": json_name,
+        "Description": "",
+        "Image": "",
+        "Page": 0,
+        "Priority": 0,
+        "Type": "Single",
+        "DefaultSettings": 1,
+        "Options": options
+    }, json_name)
+
+def generate_file_override_json(all_options_data, group_name, applied_races):
+    """
+    all_options_data: list of dicts with 'option_name' and 'files_mapping' keys
+    group_name: user-specified group name for the file and JSON "Name"
+    applied_races: dict of {race_name: race_id} - races that this override applies to
+    Returns: (json_dict, filename_without_extension)
+    """
+    def substitute_variant(path):
+        return path.replace("{variant}", "")
+
+    options = []
+    
+    # Create default "No Changes" option first
+    default_option = {
+        "Name": "Off",
+        "Description": "Keep original game files unchanged",
+        "Priority": 0,
+        "Files": {},
+        "FileSwaps": {},
+        "Manipulations": []
+    }
+    options.append(default_option)
+    
+    # Create user-defined options
+    for option_data in all_options_data:
+        option_name = option_data['option_name']
+        files_mapping = option_data['files_mapping']
+        
+        # Create the option with file overrides
+        files = {}
+        for race_name, race_id in applied_races.items():
+            for file_mapping in files_mapping:
+                target_pattern = file_mapping['target_pattern']
+                mod_path = file_mapping['mod_path']
+                target_path = substitute_variant(target_pattern.replace("{race_id}", race_id))
+                files[target_path] = mod_path
+        
+        user_option = {
+            "Name": option_name,
+            "Description": "",
+            "Priority": 0,
+            "Files": files,
+            "FileSwaps": {},
+            "Manipulations": []
+        }
+        options.append(user_option)
+
+    json_name = group_name
     return ({
         "Version": 0,
         "Name": json_name,
