@@ -17,7 +17,7 @@ class PenumbraPathMapperApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Penumbra Path Mapper")
-        self.geometry("750x750")
+        self.geometry("1200x850")
         self.create_widgets()
 
     def create_widgets(self):
@@ -35,16 +35,19 @@ class PenumbraPathMapperApp(tk.Tk):
         ttk.Label(frm, text="Author:").grid(column=0, row=row, sticky='w')
         self.author_entry = ttk.Entry(frm, width=50)
         self.author_entry.grid(column=1, row=row, sticky='w')
+        self.author_entry.insert(0, "Penumbra Path Mapper")
         row += 1
 
         ttk.Label(frm, text="Description:").grid(column=0, row=row, sticky='w')
         self.desc_entry = ttk.Entry(frm, width=50)
         self.desc_entry.grid(column=1, row=row, sticky='w')
+        self.desc_entry.insert(0, "Mod for Penumbra")
         row += 1
 
         ttk.Label(frm, text="Website:").grid(column=0, row=row, sticky='w')
         self.website_entry = ttk.Entry(frm, width=50)
         self.website_entry.grid(column=1, row=row, sticky='w')
+        self.website_entry.insert(0, "https://github.com/ShinoMythmaker/Penumbra-Path-Mapper")
         row += 1
 
         ttk.Label(frm, text="Version:").grid(column=0, row=row, sticky='w')
@@ -53,25 +56,28 @@ class PenumbraPathMapperApp(tk.Tk):
         self.version_entry.insert(0, "1.0.0")
         row += 1
 
-        # Path patterns
-        ttk.Label(frm, text="File Path Patterns (one per line):").grid(column=0, row=row, sticky='nw')
-        self.path_patterns_text = tk.Text(frm, height=8, width=70)
-        self.path_patterns_text.grid(column=1, row=row, sticky='ew')
-        self.path_patterns_text.insert("1.0", "chara/human/{race_id}/animation/a0001/bt_common/emote/s_pose{variant}_loop.pap\nchara/human/{race_id}/animation/a0001/bt_common/emote/s_pose{variant}_start.pap")
-        row += 1
-
-        # Variants
-        ttk.Label(frm, text="Number of Variants:").grid(column=0, row=row, sticky='w')
-        self.variant_count_entry = ttk.Entry(frm, width=10)
-        self.variant_count_entry.grid(column=1, row=row, sticky='w')
-        self.variant_count_entry.insert(0, "4")
-        row += 1
-
-        # Group Name
-        ttk.Label(frm, text="Group Name:").grid(column=0, row=row, sticky='w')
-        self.group_name_entry = ttk.Entry(frm, width=20)
-        self.group_name_entry.grid(column=1, row=row, sticky='w')
-        self.group_name_entry.insert(0, "sit")
+        # Operations section with tabs
+        ttk.Label(frm, text="Operations:").grid(column=0, row=row, sticky='nw')
+        operations_frame = ttk.Frame(frm)
+        operations_frame.grid(column=1, row=row, sticky='ew', pady=10)
+        
+        # Create notebook for tabs with larger height
+        self.operations_notebook = ttk.Notebook(operations_frame)
+        self.operations_notebook.pack(fill='both', expand=True)
+        
+        # Set minimum height for the operations area
+        operations_frame.configure(height=600)
+        operations_frame.pack_propagate(False)
+        
+        # Add operation button
+        add_button_frame = ttk.Frame(operations_frame)
+        add_button_frame.pack(fill='x', pady=(5, 0))
+        ttk.Button(add_button_frame, text="+ Add File Redirection Operation", 
+                  command=self.add_file_redirection_tab).pack(side='left')
+        
+        # Store operation tabs
+        self.operation_tabs = []
+        
         row += 1
 
         # Output directory
@@ -92,30 +98,234 @@ class PenumbraPathMapperApp(tk.Tk):
         if dirname:
             self.output_dir.set(dirname)
     
+    def add_file_redirection_tab(self):
+        """Add a new file redirection operation tab"""
+        tab_number = len(self.operation_tabs) + 1
+        tab_name = f"Redirection {tab_number}"
+        
+        # Create tab frame
+        tab_frame = ttk.Frame(self.operations_notebook)
+        self.operations_notebook.add(tab_frame, text=tab_name)
+        
+        # Create scrollable frame
+        canvas = tk.Canvas(tab_frame)
+        scrollbar = ttk.Scrollbar(tab_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        # Bind canvas resize to update scrollable frame width
+        def configure_canvas_width(event):
+            canvas.itemconfig(canvas_window, width=event.width)
+        
+        canvas.bind('<Configure>', configure_canvas_width)
+        
+        canvas_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Create the file redirection operation UI
+        tab_data = self.create_file_redirection_operation(scrollable_frame, tab_number)
+        tab_data['frame'] = tab_frame
+        tab_data['name'] = tab_name
+        tab_data['type'] = 'file_redirection'
+        
+        self.operation_tabs.append(tab_data)
+        
+        # Select the new tab
+        self.operations_notebook.select(tab_frame)
+    
+    def create_file_redirection_operation(self, parent, tab_number):
+        """Create the UI for a file redirection operation"""
+        row = 0
+        
+        # Tab header with close button
+        header_frame = ttk.Frame(parent)
+        header_frame.grid(column=0, row=row, columnspan=2, sticky='ew', pady=(0, 10))
+        ttk.Label(header_frame, text=f"File Redirection Operation {tab_number}", 
+                 font=('TkDefaultFont', 10, 'bold')).pack(side='left')
+        ttk.Button(header_frame, text="×", width=3, 
+                  command=lambda: self.close_tab(tab_number-1)).pack(side='right')
+        row += 1
+        
+        # Path patterns
+        ttk.Label(parent, text="File Path Patterns (one per line):").grid(column=0, row=row, sticky='nw')
+        path_patterns_text = tk.Text(parent, height=6, width=70)
+        path_patterns_text.grid(column=1, row=row, sticky='ew', pady=(0, 10))
+        path_patterns_text.insert("1.0", "chara/human/{race_id}/animation/a0001/bt_common/emote/s_pose{variant}_loop.pap\nchara/human/{race_id}/animation/a0001/bt_common/emote/s_pose{variant}_start.pap")
+        row += 1
+
+        # Variants
+        ttk.Label(parent, text="Number of Variants:").grid(column=0, row=row, sticky='w')
+        variant_count_entry = ttk.Entry(parent, width=10)
+        variant_count_entry.grid(column=1, row=row, sticky='w', pady=(0, 5))
+        variant_count_entry.insert(0, "4")
+        row += 1
+
+        # Group Name
+        ttk.Label(parent, text="Group Name:").grid(column=0, row=row, sticky='w')
+        group_name_entry = ttk.Entry(parent, width=20)
+        group_name_entry.grid(column=1, row=row, sticky='w', pady=(0, 10))
+        group_name_entry.insert(0, f"operation{tab_number}")
+        row += 1
+
+        # APPLIED TO RACES SECTION
+        ttk.Label(parent, text="Applied to (files in your mod):").grid(column=0, row=row, sticky='nw', columnspan=2)
+        row += 1
+
+        # Applied to Gender Selection
+        ttk.Label(parent, text="Applied to Genders:").grid(column=0, row=row, sticky='w')
+        source_gender_frame = ttk.Frame(parent)
+        source_gender_frame.grid(column=1, row=row, sticky='w')
+        source_include_male = tk.BooleanVar(value=True)
+        source_include_female = tk.BooleanVar(value=True)
+        ttk.Checkbutton(source_gender_frame, text="Male", variable=source_include_male).pack(side='left')
+        ttk.Checkbutton(source_gender_frame, text="Female", variable=source_include_female).pack(side='left', padx=(10, 0))
+        row += 1
+
+        # Applied to Race Selection
+        ttk.Label(parent, text="Applied to Races:").grid(column=0, row=row, sticky='nw')
+        source_race_frame = ttk.Frame(parent)
+        source_race_frame.grid(column=1, row=row, sticky='ew', pady=(0, 5))
+        
+        # Create checkboxes for each applied to race
+        source_race_vars = {}
+        race_names = ["Midlander", "Highlander", "Elezen", "Miqo'te", "Roegadyn", "Lalafell", "Au Ra", "Hrothgar", "Viera"]
+        
+        # Add Select All / Deselect All buttons for applied to races
+        source_button_frame = ttk.Frame(source_race_frame)
+        source_button_frame.pack(fill='x', pady=(0, 5))
+        ttk.Button(source_button_frame, text="Select All", 
+                  command=lambda: self.select_all_races_in_tab(source_race_vars)).pack(side='left')
+        ttk.Button(source_button_frame, text="Deselect All", 
+                  command=lambda: self.deselect_all_races_in_tab(source_race_vars)).pack(side='left', padx=(5, 0))
+        
+        # Create applied to race checkboxes in a grid
+        source_race_grid_frame = ttk.Frame(source_race_frame)
+        source_race_grid_frame.pack(fill='both', expand=True)
+        
+        for i, race in enumerate(race_names):
+            source_race_vars[race] = tk.BooleanVar(value=True)
+            cb = ttk.Checkbutton(source_race_grid_frame, text=race, variable=source_race_vars[race])
+            cb.grid(row=i//3, column=i%3, sticky='w', padx=(0, 10), pady=2)
+        
+        source_race_grid_frame.columnconfigure(0, weight=1)
+        source_race_grid_frame.columnconfigure(1, weight=1)
+        source_race_grid_frame.columnconfigure(2, weight=1)
+        row += 1
+
+        # Separator
+        ttk.Separator(parent, orient='horizontal').grid(column=0, row=row, columnspan=2, sticky='ew', pady=10)
+        row += 1
+
+        # OPTIONS SECTION
+        ttk.Label(parent, text="Options (choices for players):").grid(column=0, row=row, sticky='nw', columnspan=2)
+        row += 1
+
+        # Options Gender Selection
+        ttk.Label(parent, text="Options Genders:").grid(column=0, row=row, sticky='w')
+        target_gender_frame = ttk.Frame(parent)
+        target_gender_frame.grid(column=1, row=row, sticky='w')
+        target_include_male = tk.BooleanVar(value=True)
+        target_include_female = tk.BooleanVar(value=True)
+        ttk.Checkbutton(target_gender_frame, text="Male", variable=target_include_male).pack(side='left')
+        ttk.Checkbutton(target_gender_frame, text="Female", variable=target_include_female).pack(side='left', padx=(10, 0))
+        row += 1
+
+        # Options Race Selection
+        ttk.Label(parent, text="Options Races:").grid(column=0, row=row, sticky='nw')
+        target_race_frame = ttk.Frame(parent)
+        target_race_frame.grid(column=1, row=row, sticky='ew')
+        
+        # Create checkboxes for each options race
+        target_race_vars = {}
+        
+        # Add Select All / Deselect All buttons for options races
+        target_button_frame = ttk.Frame(target_race_frame)
+        target_button_frame.pack(fill='x', pady=(0, 5))
+        ttk.Button(target_button_frame, text="Select All", 
+                  command=lambda: self.select_all_races_in_tab(target_race_vars)).pack(side='left')
+        ttk.Button(target_button_frame, text="Deselect All", 
+                  command=lambda: self.deselect_all_races_in_tab(target_race_vars)).pack(side='left', padx=(5, 0))
+        
+        # Create options race checkboxes in a grid
+        target_race_grid_frame = ttk.Frame(target_race_frame)
+        target_race_grid_frame.pack(fill='both', expand=True)
+        
+        for i, race in enumerate(race_names):
+            target_race_vars[race] = tk.BooleanVar(value=True)
+            cb = ttk.Checkbutton(target_race_grid_frame, text=race, variable=target_race_vars[race])
+            cb.grid(row=i//3, column=i%3, sticky='w', padx=(0, 10), pady=2)
+        
+        target_race_grid_frame.columnconfigure(0, weight=1)
+        target_race_grid_frame.columnconfigure(1, weight=1)
+        target_race_grid_frame.columnconfigure(2, weight=1)
+        
+        # Configure column weights
+        parent.columnconfigure(1, weight=1)
+        
+        return {
+            'path_patterns_text': path_patterns_text,
+            'variant_count_entry': variant_count_entry,
+            'group_name_entry': group_name_entry,
+            'source_include_male': source_include_male,
+            'source_include_female': source_include_female,
+            'source_race_vars': source_race_vars,
+            'target_include_male': target_include_male,
+            'target_include_female': target_include_female,
+            'target_race_vars': target_race_vars
+        }
+    
+    def close_tab(self, tab_index):
+        """Close a specific operation tab"""
+        if 0 <= tab_index < len(self.operation_tabs):
+            tab_data = self.operation_tabs[tab_index]
+            self.operations_notebook.forget(tab_data['frame'])
+            self.operation_tabs.pop(tab_index)
+            
+            # Update tab numbers
+            for i, tab in enumerate(self.operation_tabs):
+                if tab['type'] == 'file_redirection':
+                    new_name = f"Redirection {i + 1}"
+                    self.operations_notebook.tab(tab['frame'], text=new_name)
+                    tab['name'] = new_name
+    
+    def select_all_races_in_tab(self, race_vars):
+        """Select all races in a specific tab"""
+        for var in race_vars.values():
+            var.set(True)
+    
+    def deselect_all_races_in_tab(self, race_vars):
+        """Deselect all races in a specific tab"""
+        for var in race_vars.values():
+            var.set(False)
+    
     def generate_full_mod(self):
-        # Gather all values (same as before)
+        # Gather mod metadata
         mod_name = self.mod_name_entry.get().strip()
         author = self.author_entry.get().strip()
         desc = self.desc_entry.get().strip()
         website = self.website_entry.get().strip()
         version = self.version_entry.get().strip() or "1.0.0"
-        patterns_raw = self.path_patterns_text.get("1.0", "end").strip()
-        patterns = [p.strip() for p in patterns_raw.splitlines() if p.strip()]
-        variant_count_str = self.variant_count_entry.get()
-        group_name = self.group_name_entry.get().strip()
         out_dir = self.output_dir.get()
 
-        if not all([mod_name, author, desc, version, patterns, variant_count_str, group_name]):
-            messagebox.showerror("Error", "Please fill out all fields.")
+        if not all([mod_name, author, desc, version]):
+            messagebox.showerror("Error", "Please fill out all mod information fields.")
             return
 
-        try:
-            variant_count = int(variant_count_str)
-            if variant_count < 1:
-                raise ValueError
-        except ValueError:
-            messagebox.showerror("Error", "Number of Variants must be a positive integer.")
+        if not self.operation_tabs:
+            messagebox.showerror("Error", "Please add at least one operation.")
             return
+
+        # Validate all operations
+        for i, tab_data in enumerate(self.operation_tabs):
+            if not self.validate_operation(tab_data, i + 1):
+                return
 
         # Use a temporary directory for packaging
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -129,13 +339,10 @@ class PenumbraPathMapperApp(tk.Tk):
             with open(os.path.join(temp_dir, "default_mod.json"), "w", encoding="utf-8") as f:
                 json.dump(default_mod, f, indent=4)
 
-            # Write all variant JSONs
-            for i in range(1, variant_count + 1):
-                variant = f"{i:02}"
-                json_obj, file_name = generate_penumbra_json(patterns, variant, group_name, RACES)
-                out_path = os.path.join(temp_dir, f"group_{group_name}{variant}.json")
-                with open(out_path, "w", encoding="utf-8") as f:
-                    json.dump(json_obj, f, indent=2)
+            # Process each operation
+            for tab_data in self.operation_tabs:
+                if tab_data['type'] == 'file_redirection':
+                    self.process_file_redirection_operation(tab_data, temp_dir)
 
             # Zip the files, then rename to .pmp
             mod_safe_name = clean_mod_name_for_filename(mod_name)
@@ -147,6 +354,117 @@ class PenumbraPathMapperApp(tk.Tk):
             os.rename(zip_path, pmp_path)
 
         messagebox.showinfo("Success", f"Generated Penumbra mod package: {pmp_path}")
+    
+    def validate_operation(self, tab_data, tab_number):
+        """Validate a single operation tab"""
+        if tab_data['type'] == 'file_redirection':
+            patterns_raw = tab_data['path_patterns_text'].get("1.0", "end").strip()
+            patterns = [p.strip() for p in patterns_raw.splitlines() if p.strip()]
+            variant_count_str = tab_data['variant_count_entry'].get()
+            group_name = tab_data['group_name_entry'].get().strip()
+
+            # Get source and target race/gender selections
+            source_include_male = tab_data['source_include_male'].get()
+            source_include_female = tab_data['source_include_female'].get()
+            source_selected_races = [race for race, var in tab_data['source_race_vars'].items() if var.get()]
+            
+            target_include_male = tab_data['target_include_male'].get()
+            target_include_female = tab_data['target_include_female'].get()
+            target_selected_races = [race for race, var in tab_data['target_race_vars'].items() if var.get()]
+
+            if not all([patterns, variant_count_str, group_name]):
+                messagebox.showerror("Error", f"Please fill out all fields in operation {tab_number}.")
+                return False
+
+            if not source_include_male and not source_include_female:
+                messagebox.showerror("Error", f"At least one 'Applied to' gender must be selected in operation {tab_number}.")
+                return False
+
+            if not target_include_male and not target_include_female:
+                messagebox.showerror("Error", f"At least one 'Options' gender must be selected in operation {tab_number}.")
+                return False
+
+            if not source_selected_races:
+                messagebox.showerror("Error", f"At least one 'Applied to' race must be selected in operation {tab_number}.")
+                return False
+
+            if not target_selected_races:
+                messagebox.showerror("Error", f"At least one 'Options' race must be selected in operation {tab_number}.")
+                return False
+
+            try:
+                variant_count = int(variant_count_str)
+                if variant_count < 1:
+                    raise ValueError
+            except ValueError:
+                messagebox.showerror("Error", f"Number of Variants must be a positive integer in operation {tab_number}.")
+                return False
+
+            # Create source races dictionary (files that exist in the mod)
+            source_races = {}
+            for race in source_selected_races:
+                if source_include_male and f"{race} M" in RACES:
+                    source_races[f"{race} M"] = RACES[f"{race} M"]
+                if source_include_female and f"{race} F" in RACES:
+                    source_races[f"{race} F"] = RACES[f"{race} F"]
+
+            # Create target races dictionary (choices for players)
+            target_races = {}
+            for race in target_selected_races:
+                if target_include_male and f"{race} M" in RACES:
+                    target_races[f"{race} M"] = RACES[f"{race} M"]
+                if target_include_female and f"{race} F" in RACES:
+                    target_races[f"{race} F"] = RACES[f"{race} F"]
+
+            if not source_races:
+                messagebox.showerror("Error", f"No valid 'Applied to' race/gender combinations found in operation {tab_number}.")
+                return False
+
+            if not target_races:
+                messagebox.showerror("Error", f"No valid 'Options' race/gender combinations found in operation {tab_number}.")
+                return False
+
+        return True
+    
+    def process_file_redirection_operation(self, tab_data, temp_dir):
+        """Process a file redirection operation and write JSON files"""
+        patterns_raw = tab_data['path_patterns_text'].get("1.0", "end").strip()
+        patterns = [p.strip() for p in patterns_raw.splitlines() if p.strip()]
+        variant_count = int(tab_data['variant_count_entry'].get())
+        group_name = tab_data['group_name_entry'].get().strip()
+
+        # Get source and target race/gender selections
+        source_include_male = tab_data['source_include_male'].get()
+        source_include_female = tab_data['source_include_female'].get()
+        source_selected_races = [race for race, var in tab_data['source_race_vars'].items() if var.get()]
+        
+        target_include_male = tab_data['target_include_male'].get()
+        target_include_female = tab_data['target_include_female'].get()
+        target_selected_races = [race for race, var in tab_data['target_race_vars'].items() if var.get()]
+
+        # Create source races dictionary
+        source_races = {}
+        for race in source_selected_races:
+            if source_include_male and f"{race} M" in RACES:
+                source_races[f"{race} M"] = RACES[f"{race} M"]
+            if source_include_female and f"{race} F" in RACES:
+                source_races[f"{race} F"] = RACES[f"{race} F"]
+
+        # Create target races dictionary
+        target_races = {}
+        for race in target_selected_races:
+            if target_include_male and f"{race} M" in RACES:
+                target_races[f"{race} M"] = RACES[f"{race} M"]
+            if target_include_female and f"{race} F" in RACES:
+                target_races[f"{race} F"] = RACES[f"{race} F"]
+
+        # Write variant JSONs for this operation
+        for i in range(1, variant_count + 1):
+            variant = f"{i:02}"
+            json_obj, file_name = generate_penumbra_json(patterns, variant, group_name, source_races, target_races)
+            out_path = os.path.join(temp_dir, f"group_{group_name}{variant}.json")
+            with open(out_path, "w", encoding="utf-8") as f:
+                json.dump(json_obj, f, indent=2)
 
 if __name__ == "__main__":
     app = PenumbraPathMapperApp()

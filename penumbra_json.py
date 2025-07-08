@@ -1,19 +1,20 @@
-def generate_penumbra_json(patterns, variant, group_name, races):
+def generate_penumbra_json(patterns, variant, group_name, source_races, target_races):
     """
     patterns: list of file path patterns with {race_id} and {variant}
     variant: string, zero-padded like '01', '02', etc.
     group_name: user-specified group name for the file and JSON "Name"
-    races: dict of {race_name: race_id}
+    source_races: dict of {race_name: race_id} - races that the mod files are applied to
+    target_races: dict of {race_name: race_id} - races that players can choose as options
     Returns: (json_dict, filename_without_extension)
     """
     def substitute_variant(path):
         return path.replace("{variant}", variant)
 
     options = []
-    for target_race, target_id in races.items():
+    for target_race, target_id in target_races.items():
         file_swaps = {}
         for pattern in patterns:
-            for source_race, source_id in races.items():
+            for source_race, source_id in source_races.items():
                 src = substitute_variant(pattern.replace("{race_id}", source_id))
                 tgt = substitute_variant(pattern.replace("{race_id}", target_id))
                 file_swaps[src] = tgt
@@ -35,7 +36,7 @@ def generate_penumbra_json(patterns, variant, group_name, races):
         "Image": "",
         "Page": 0,
         "Priority": 0,
-        "Type": "Multi",
+        "Type": "Single",
         "DefaultSettings": 1,
         "Options": options
     }, json_name)
