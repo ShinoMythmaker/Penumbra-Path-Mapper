@@ -1,0 +1,21 @@
+# List of FFXIV races and their IDs for Penumbra swaps
+RACES = {
+    "Midlander M": "c0101",
+    "Midlander F": "c0201",
+    "Highlander M": "c0301",
+    "Highlander F": "c0401",
+    "Elezen M": "c0501",
+    "Elezen F": "c0601",
+    "Miqo'te M": "c0701",
+    "Miqo'te F": "c0801",
+    "Roegadyn M": "c0901",
+    "Roegadyn F": "c1001",
+    "Lalafell M": "c1101",
+    "Lalafell F": "c1201",
+    "Au Ra M": "c1301",
+    "Au Ra F": "c1401",
+    "Hrothgar M": "c1501",
+    "Hrothgar F": "c1601",
+    "Viera M": "c1701",
+    "Viera F": "c1801",
+}
